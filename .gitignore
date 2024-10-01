@@ -1,0 +1,15 @@
+/env
+/.venv
+/models
+/data
+/runs
+/wandb
+__pycache__
+/.vscode
+/losses/boost_1_82_0
+/losses/eigen4
+build
+dist
+*egg-info*
+/cell_scripts
+/configs
