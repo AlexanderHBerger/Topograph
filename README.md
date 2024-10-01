@@ -1,90 +1,155 @@
-**Betti matching**: Topological loss and metric for 2D image segmentation
-========
-
-**What is Betti matching?** The topology of images is best captured by persistent homology, which can be represented in form of persistence barcodes. An interval in the barcode represents a topological feature, e.g. a connected component in dimension 0 or a loop in dimension 1. 
-
-![Betti_matching](.github/Betti-matching.png "Betti matching")
-
-Betti matching is a framework, based on the theory of induced matchings (see https://arxiv.org/abs/1311.3681), that matches intervals representing topological features, which sptially correspond to each other. It defines the Betti matching loss, which enforces topologically accurate image segmentations during training. The Betti matching error additionally serves as a metric for the evaluation of segmentation tasks. It can be seen as a refinement of the well-established Betti number error by counting the features in both images that do not spatially correspond to a feature in the other image.
-
-![Betti_matching_performance](.github/Betti-matching-error.png "Betti matching performance")
-
-**About the code**. We have provided the source code of Betti matching along with instructions for the training and evaluation scripts. Furthermore we have provided an extended implementation of the Wasserstein matching (see https://github.com/HuXiaoling/TopoLoss), which additionally matches intervals in dimension 0. The introduction.ipynb notebook introduces the implemented functions and visualizes the improvements of the Betti matching over the traditional Wasserstein Matching. 
-
-![introduction](.github/Betti-matching_vs_Wasserstein-matching.png "introduction cremi")
-
-The train.py and evaluation.py files can be used to reproduce our experiments. We also provide examplary images and labels for all datasets in the data folder. Note that you can download the trained models and the full datasets from [here](https://doi.org/10.5281/zenodo.7312139). 
-
- Please follow the procedure below.
+# Topograph: An efficient graph-based algorithm for strictly topology preserving image segmentation
 
 
-## Usage
+This repository contains the implementation of **Topograph**, an efficient and general topology-preserving loss function for image segmentation tasks. Leveraging the *combined region graph* $\mathcal{G}(P, G)$, this method provides topological guarantees beyond homotopoy equivalence of ground truth and segmentation with a low computational complexity of $O(n)$.
 
-### Installation of required packages in virtual environment
+<div align="center">
+  <img src="figures/Fig1_intro_node_move.png"  width="800">
+</div>
 
-1.) Download venv package virtual environment (venv): python3 -m pip install --user virtualenv
+## Overview
+In segmentation and subsequent analysis tasks, ensuring topological correctness is often more critical than achieving marginal improvements in pixle-wise accuracy and Dice score. While pixel-losses, such as Dice-loss, provide guarantees for topological correctness for a zero loss, these guarantees are just a result of the required equivalence to the ground truth segmentation. Hence, there is no preference for correcting segmented regions that preserve topology compared to regions entirely irrelevant to topology.
 
-2.) Create a virtual environment: python3 -m venv venv
+<div align="center">
+  <img src="figures/Fig2_method_short.png"  width="800">
+</div>
 
-3.) Activate virtual environment: source venv/bin/activate
+Starting from a binarized prediction our method builds a combined image by overlaying the ground truth segmentation to form a four-class image $C$. From this combined image $C$ a superpixel graph $\mathcal{G}(P, G)$ is constructed via connected component labeling, such that for the resulting graph $\mathcal{G}(P, G)$ each node represents one region and edges are determined based on spatial adjacency. 
 
-4.) Install requests package: python -m pip install requests
+Critical nodes representing incorrectly predicted regions causing topological errors can be identified in $\mathcal{G}(P, G)$ based on their local neighborhood. Formally, the set of critical nodes is defined by all wrongly predicted nodes that do not have exactly one correctly predicted foreground and one correctly predicted background neighbor. The final loss function is obtained by pixel-wise aggregation for each critical region.
 
-5.) Use requests to install required packages: pip install -r requirements.txt
+Compared to existing work, this approach has several advantages: Our loss formulation:
+1. surpasses existing methods in terms of topological correctness of the network’s predictions,
+2. provides stricter topological guarantees than existing works, i.e. guarantees beyond the homotopy equivalence of ground truth and segmentation by enforcing homotopy equivalence to their union and intersection through the respective inclusion maps, capturing the spatial correspondence of their topological properties,
+3. is time and resource-efficient because of its low $O(n)$ complexity and empirically low runtime,
+4. and is flexible, making it applicable to arbitrary structures and image domains.
 
-### Use the virtual environment in Jupyter Notebook
+## DIU Metric
+Besides the Topograph loss function, we also introduce the **DIU metric**, which mesasures the **D**iscrepancy between **I**ntersection and **U**nion. It can be formulized as 
 
-6.) Install ipykernel: pip install --user ipykernel
+$\xi_{DIU} = |b_{0_\cap} − b_{0_\cup}| + |b_{1_\cap} − b_{1_\cup}|$,
 
-7.) python -m ipykernel install --user --name=BettiMatching
+where the Betti numbers $b_0$ and $b_1$ represent the number of foreground and background components in the intersection $\cap$ and union $\cup$. DIU has the advantage of measuring the spatial correspondence of the components and their continuity. See the figure for an example where the DIU metric captures the segmantic difference between prediction and ground truth in contrast to Betti number error and Betti matching error. 
 
-8.) Activate BettiMatching as kernel in Jupyter Notebook
+<div align="center">
+  <img src="figures/Fig3_DIU_metric_motivation.png"  width="600">
+</div>
 
-### Usage of Betti matching:
-For a detailed explanation and introduction to Betti matching we refer to the Jupyter Notebook introduction.ipynb, which introduces the most important functions of the BettiMatching class and the CubicalPersistence class.
+## Requirements
+Our implementation requires just a few packages, which can quickly be installed:
+```bash
+pip install -r requirements.txt
+```
 
-### Training
-1.) To train from scratch using CPU:
+## Implementation Topograph
+**About the code**. We provide the source code of the **Topograph** method in this repository, together with an examplatory training script for easy reproducibility and comparison. The loss implementation can be found in [this file](losses/topograph.py) and can be easily integrated in any project:
+```python
+# Import the loss function
+from losses.topograph import DiceTopographLoss
+...
+# Initialize
+loss_function = DiceTopographLoss(
+            softmax=True,
+            num_processes=16,
+            include_background=not config.DATA.INCLUDE_BACKGROUND,
+            use_c=not args.no_c,
+            eight_connectivity=config.LOSS.EIGHT_CONNECTIVITY,
+            aggregation=AggregationType[getattr(config.LOSS, "AGGREGATION_TYPE", "mean").upper()],
+            thres_distr=ThresholdDistribution[getattr(config.LOSS, "THRES_DISTR", "none").upper()],
+            thres_var=getattr(config.LOSS, "THRES_VAR", 0.0),
+        )
+...
+# Calculates the loss and returns information about components in dic
+loss, dic = loss_function(outputs, labels, alpha=alpha)
+```
 
-python3 train.py --config configs/cremi_config.yaml --dataconfig configs/cremi_dataconfig.yaml
+## Implementation DIU metric
 
-2.) To train from scratch using GPU:
+It is easy to use our implementation of the DIU metric (implemeted in [this file](metrics/topograph.py)):
+```python
+# Import the metric
+from metrics.topograph import TopographMetric
+...
+# Initialize
+diu_metric = TopographMetric(
+            num_processes=16,
+            ignore_background=not config.DATA.INCLUDE_BACKGROUND
+        )
 
-python3 train.py --config configs/cremi_config.yaml --dataconfig configs/cremi_dataconfig.yaml --cuda_visible_device 2
+...
+for img, label in dataloader:
+    ...
+    # DIU metric works with one-hot encoded predictions.
+    # It may be required to preprocess your outputs.
+    diu_metric(y_pred=one_hot_pred, y=label)
+# aggregate scores
+diu_score = diu_metric.aggregate().item()
 
-3.) To resume training:
+# reset internal aggregation if metric should be used again (e.g. next epoch)
+diu_metric.reset()
+```
 
-python3 train.py --config configs/cremi_config.yaml --dataconfig configs/cremi_dataconfig.yaml --cuda_visible_device 2 --resume models/cremi/Topo_superlevel_relative_False_alpha_0.5/best_model_dict.pth
+## Full training script
+To reproduce our experiments we provide the complete [training script](./train.py). The parameters can be set in a seperate config file:
+```bash
+python train.py --config configs/cremi_config.yaml
+```
+Example config files that can be used right away can be found [here](configs/).
 
-4.) To use a pretrained model:
+### Command-line arguments
+For further customization (using a pretrained model or running a hyperparameter sweep) you can set several command-line arguments:
+```bash
+usage: train.py [-h] [--config CONFIG] [--pretrained PRETRAINED] [--resume RESUME] [--disable_wandb] [--folds FOLDS] [--fold_no FOLD_NO] [--sweep] [--log_train_images] [--no_c]
 
-python3 train.py --config configs/cremi_config.yaml --dataconfig configs/cremi_dataconfig.yaml --cuda_visible_device 2 --pretrained models/cremi/Dice/best_model_dict.pth
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       config file (.yaml) containing the hyper-parameters for training and dataset specific info.
+  --pretrained PRETRAINED
+                        checkpoint of the pretrained model
+  --resume RESUME       checkpoint of the last epoch of the model
+  --disable_wandb       disable wandb logging
+  --folds FOLDS         Number of folds for cross-validation
+  --fold_no FOLD_NO     Which fold to use for training and validation
+  --sweep               If the training is part of a sweep
+  --log_train_images    Log training images to wandb
+  --no_c                Whether to not use the efficient c implementation
+```
 
-### Evaluation
-1.) To evaluate a trained model saved in location ./models/cremi using CPU:
 
-python3 evaluate.py --folder ./models/cremi --config configs/cremi_config.yaml --dataconfig configs/cremi_dataconfig.yaml
+## Full evaluation script
+We provide a full-working [evaluation script](./evaluation.py) to evaluate a model on multiple metrics. The parameters can be set in a seperate config file:
+```bash
+python evaluation.py --config configs/cremi_config.yaml
+```
+```bash
+usage: evaluation.py [-h] [--config CONFIG] [--model MODEL]
 
-2.) To evaluate a trained model saved in location ./models/cremi using GPU:
+options:
+  -h, --help       show this help message and exit
+  --config CONFIG  config file (.yaml) containing the hyper-parameters for training and dataset specific info.
+  --model MODEL    checkpoint of the pretrained model
+```
 
-python3 evaluate.py --folder ./models/cremi --config configs/cremi_config.yaml --dataconfig configs/cremi_dataconfig.yaml --cuda_visible_device 2
+## Results
 
+Here are some results of the performance of Topograph compared to other methods (see full results in paper):
 
-<!-- ## Citing Betti matching
-If you find our repository useful in your research, please cite the following:
-```bibtex
-@article{
-}
-``` -->
+### Roads Dataset
+| Method        | DIU ↓         | BM ↓          | B0 ↓          | B1 ↓          | Dice ↑        | clDice ↑      |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| Dice          | 7.313 ± 0.613 | 6.615 ± 0.531 | 1.935 ± 0.417 | 2.642 ± 0.174 | 0.819 ± 0.003 | 0.720 ± 0.011 |
+| clDice        | 7.127 ± 0.318 | 5.810 ± 0.286 | 1.515 ± 0.212 | 3.058 ± 0.142 | 0.803 ± 0.007 | 0.704 ± 0.012 |
+| HuTopo        | 7.498 ± 0.743 | 6.356 ± 0.665 | 1.185 ± 0.617 | 2.683 ± 0.378 | 0.817 ± 0.004 | 0.714 ± 0.004 |
+| BettiMatching | 6.733 ± 0.365 | 5.908 ± 0.234 | 0.942 ± 0.098 | 2.317 ± 0.080 | 0.818 ± 0.002 | 0.707 ± 0.012 |
+| Ours          | 6.521 ± 0.470 | 5.635 ± 0.404 | 1.212 ± 0.247 | 2.619 ± 0.155 | 0.817 ± 0.002 | 0.711 ± 0.008 |
 
-<!-- # License
--->
+### TopCoW Dataset
+| Method        | DIU ↓          | BM ↓         | B0 ↓         | B1 ↓         | Dice ↑       | clDice ↑     |
+| ------------- | -------------- | ------------ | ------------ | ------------ | ------------ | ------------ |
+| Dice          | 15.716 ± 1.61  | 0.977 ± 0.89 | 0.722 ± 0.07 | 0.073 ± 0.02 | 0.729 ± 0.01 | 0.773 ± 0.01 |
+| clDice        | 10.670 ± 1.76  | 0.678 ± 0.13 | 0.483 ± 0.11 | 0.049 ± 0.01 | 0.733 ± 0.01 | 0.804 ± 0.02 |
+| HuTopo        | 16.057 ± 6.67  | 0.992 ± 0.43 | 0.717 ± 0.33 | 0.092 ± 0.05 | 0.711 ± 0.04 | 0.758 ± 0.04 |
+| BettiMatching | 30.375 ± 35.21 | 0.816 ± 0.07 | 0.605 ± 0.06 | 0.062 ± 0.01 | 0.739 ± 0.01 | 0.786 ± 0.01 |
+| Ours          | 10.477 ± 1.35  | 0.658 ± 0.09 | 0.461 ± 0.06 | 0.052 ± 0.02 | 0.735 ± 0.01 | 0.801 ± 0.01 |
 
-# Acknowledgement
-We acknowledge the following repositories from where we have inherited code snippets or copied implementation details:
-
-1. ClDice: [[code](https://github.com/jocpae/clDice)][[paper](https://arxiv.org/abs/2003.07311)]
-2. TopoLoss: [[code](https://github.com/HuXiaoling/TopoLoss)][[paper](https://arxiv.org/abs/1906.05404)]
-
-<!-- # Contributing
-We actively welcome your pull requests! Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for more info. -->
+![Qualitative TopCoW](figures/Sup_topcow_quals.png)
