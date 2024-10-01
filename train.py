@@ -35,7 +35,6 @@ from utils import train_utils
 from tqdm import tqdm
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-os.environ['WANDB_API_KEY'] = '94ab84459aa1b42734e2980087f053e645c271e7'
 
 
 parser = ArgumentParser()
