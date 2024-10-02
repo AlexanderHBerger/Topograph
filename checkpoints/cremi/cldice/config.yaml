@@ -1,0 +1,39 @@
+MODEL:
+  NAME: "UNet"
+  CHANNELS: [16, 32, 64, 128, 256]
+  NUM_RES_UNITS: 3
+
+LOSS:
+  ONE_VS_REST: False
+  DICE_TYPE: 'dice'
+  EIGHT_CONNECTIVITY: False
+  TOPOLOGY_WEIGHTS: [1,1]
+
+TRAIN:
+  NUM_WORKERS: 8                   # Numettier of data loading threads
+  SEED: 10                          # random seed for reproducibility
+  MAX_EPOCHS: 350
+  BATCH_SIZE: 4                     # Batch size for a single GPU
+  SAVE_PATH: "./models/"            # save path for the checkpoint
+  LOG_PATH: "./runs/"               # save path for the tensorboard log
+  VAL_INTERVAL: 1                   # validation interval
+  LOG_INTERVAL: 1                  # tensorboard log interval
+  LOG_GRADIENTS: False
+  MAX_VISUALIZE: False
+  BETTI_EVALUATE: 500
+
+DATA:
+  DIM: 2                                                        # data dimension
+  DATA_PATH: './data/cremi/'
+  TEST_PATH: './data/cremi_test/'
+  FORMAT: '.png'
+  DATASET: 'cremi'                                              # Dataset name
+  IMG_SIZE: 128        #48
+  NUM_SAMPLES: -1
+  FIVE_CROPS: False
+  NORMALIZE: False
+  RESCALE: 1
+  NUM_PATCH: 1
+  IN_CHANNELS: 1
+  OUT_CHANNELS: 2
+  INCLUDE_BACKGROUND: False
