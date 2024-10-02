@@ -1,7 +1,7 @@
 # Topograph: An efficient graph-based algorithm for strictly topology preserving image segmentation
 
 
-This repository contains the implementation of **Topograph**, an efficient and general topology-preserving loss function for image segmentation tasks. Leveraging the *combined region graph* $\mathcal{G}(P, G)$, this method provides topological guarantees beyond homotopoy equivalence of ground truth and segmentation with a low computational complexity of $O(n)$.
+This repository contains the implementation of **Topograph**, an efficient and general topology-preserving loss function for image segmentation tasks. Leveraging the *combined region graph* $\mathcal{G}(P, G)$, this method provides topological guarantees beyond homotopoy equivalence of ground truth and segmentation with a low computational complexity of $O(n \cdot \alpha(n))$.
 
 <div align="center">
   <img src="figures/Fig1_intro_node_move.png"  width="800">
@@ -21,7 +21,7 @@ Critical nodes representing incorrectly predicted regions causing topological er
 Compared to existing work, this approach has several advantages: Our loss formulation:
 1. surpasses existing methods in terms of topological correctness of the network’s predictions,
 2. provides stricter topological guarantees than existing works, i.e. guarantees beyond the homotopy equivalence of ground truth and segmentation by enforcing homotopy equivalence to their union and intersection through the respective inclusion maps, capturing the spatial correspondence of their topological properties,
-3. is time and resource-efficient because of its low $O(n)$ complexity and empirically low runtime,
+3. is time and resource-efficient because of its low $O(n \cdot \alpha(n))$ complexity and empirically low runtime,
 4. and is flexible, making it applicable to arbitrary structures and image domains.
 
 ## DIU Metric
