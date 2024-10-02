@@ -25,11 +25,25 @@ Compared to existing work, this approach has several advantages: Our loss formul
 4. and is flexible, making it applicable to arbitrary structures and image domains.
 
 ## DIU Metric
-Besides the Topograph loss function, we also introduce the **DIU metric**, which mesasures the **D**iscrepancy between **I**ntersection and **U**nion. It can be formulized as 
+We propose a new metric that describes the Discrepancy between Intersection and Union (DIU) as a strict measure for topological accuracy. The metric is based on the linear map $i_{\*}: H_*(F_{\epsilon}(P) \cap F_{2\epsilon}(G)) \to H_{\*}(F_{\epsilon}(P) \cup F_{2\epsilon}(G))$ in homology (with coefficients in the field with two elements, $\mathbb F_2$) induced by the inclusion $i: F_{\epsilon}(P) \cap F_{2\epsilon}(G)) \to F_{\epsilon}(P) \cup F_{2\epsilon}(G)$ of the intersection into the union. 
+Formally, $\xi^{err}$ is defined as
 
-$\xi_{DIU} = |b_{0_\cap} − b_{0_\cup}| + |b_{1_\cap} − b_{1_\cup}|$,
+$\xi^{err} = \dim(\ker i_{\*}) + \dim(\mathop{\text{coker }} i_{\*})$.
 
-where the Betti numbers $b_0$ and $b_1$ represent the number of foreground and background components in the intersection $\cap$ and union $\cup$. DIU has the advantage of measuring the spatial correspondence of the components and their continuity. See the figure for an example where the DIU metric captures the segmantic difference between prediction and ground truth in contrast to Betti number error and Betti matching error. 
+By Alexander duality, this quantity can be expressed purely in terms of connected components (homology in degree $0$) of foreground and background.
+Writing 
+$j: B_{\epsilon}(P) \cap B_{2\epsilon}(G)) \to B_{\epsilon}(P) \cup B_{2\epsilon}(G)$ of the intersection of backgrounds into their union. 
+We have
+
+$\dim(\ker i_1) = \dim(\mathop{\text{coker }} j_0),\\
+\dim(\mathop{\text{coker }} i_1)= \dim(\ker j_0).$
+
+Thus, we have
+
+$\xi^{err} = \dim(\ker i_0) + \dim(\mathop{\text{coker }} i_0)+\dim(\ker j_0) + \dim(\mathop{\text{coker }} j_0) .$
+
+
+Intuitively, the DIU metric $\xi^{err}$ counts the number of components in the union that do not have a counterpart in the intersection ($`\dim(\mathop{\text{coker}})`$) and the surplus of intersection components that correspond to the same component in the union ($`\dim(\ker)`$). In the figure below (d) shows an example of cases where the Betti number error and the Betti matching error both fail to capture the semantic difference between ground truth and prediction.
 
 <div align="center">
   <img src="figures/Fig3_DIU_metric_motivation.png"  width="600">
@@ -141,6 +155,7 @@ Here are some results of the performance of Topograph compared to other methods 
 | clDice        | 7.127 ± 0.318 | 5.810 ± 0.286 | 1.515 ± 0.212 | 3.058 ± 0.142 | 0.803 ± 0.007 | 0.704 ± 0.012 |
 | HuTopo        | 7.498 ± 0.743 | 6.356 ± 0.665 | 1.185 ± 0.617 | 2.683 ± 0.378 | 0.817 ± 0.004 | 0.714 ± 0.004 |
 | BettiMatching | 6.733 ± 0.365 | 5.908 ± 0.234 | 0.942 ± 0.098 | 2.317 ± 0.080 | 0.818 ± 0.002 | 0.707 ± 0.012 |
+| Mosin         | 7.221 ± 0.710 | 6.352 ± 0.640 | 1.523 ± 0.380 | 2.756 ± 0.110 | 0.816 ± 0.001 | 0.710 ± 0.010 |
 | Ours          | 6.521 ± 0.470 | 5.635 ± 0.404 | 1.212 ± 0.247 | 2.619 ± 0.155 | 0.817 ± 0.002 | 0.711 ± 0.008 |
 
 ### TopCoW Dataset
@@ -149,7 +164,8 @@ Here are some results of the performance of Topograph compared to other methods 
 | Dice          | 15.716 ± 1.61  | 0.977 ± 0.89 | 0.722 ± 0.07 | 0.073 ± 0.02 | 0.729 ± 0.01 | 0.773 ± 0.01 |
 | clDice        | 10.670 ± 1.76  | 0.678 ± 0.13 | 0.483 ± 0.11 | 0.049 ± 0.01 | 0.733 ± 0.01 | 0.804 ± 0.02 |
 | HuTopo        | 16.057 ± 6.67  | 0.992 ± 0.43 | 0.717 ± 0.33 | 0.092 ± 0.05 | 0.711 ± 0.04 | 0.758 ± 0.04 |
-| BettiMatching | 30.375 ± 35.21 | 0.816 ± 0.07 | 0.605 ± 0.06 | 0.062 ± 0.01 | 0.739 ± 0.01 | 0.786 ± 0.01 |
+| BettiMatching | 12.352 ± 0.90  | 0.761 ± 0.06 | 0.556 ± 0.06 | 0.064 ± 0.01 | 0.740 ± 0.01 | 0.787 ± 0.01 |
+| Mosin         | 23.534 ± 16.95 | 1.489 ± 0.98 | 1.128 ± 0.83 | 0.154 ± 0.07 | 0.606 ± 0.16 | 0.659 ± 0.17 |
 | Ours          | 10.477 ± 1.35  | 0.658 ± 0.09 | 0.461 ± 0.06 | 0.052 ± 0.02 | 0.735 ± 0.01 | 0.801 ± 0.01 |
 
 ![Qualitative TopCoW](figures/Sup_topcow_quals.png)
