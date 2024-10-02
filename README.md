@@ -1,5 +1,4 @@
-# Topograph: An efficient graph-based algorithm for strictly topology preserving image segmentation
-
+# Topograph: An efficient graph-based framework for strictly topology preserving image segmentation
 
 This repository contains the implementation of **Topograph**, an efficient and general topology-preserving loss function for image segmentation tasks. Leveraging the *combined region graph* $\mathcal{G}(P, G)$, this method provides topological guarantees beyond homotopoy equivalence of ground truth and segmentation with a low computational complexity of $O(n \cdot \alpha(n))$.
 
